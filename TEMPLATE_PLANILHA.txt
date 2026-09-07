@@ -1,0 +1,178 @@
+[Workbook]
+Codec=65001
+CodePage=65001
+
+[Worksheet]
+Name=Controle
+Visible=1
+Index=1
+CodeName=Controle
+
+[Names]
+Define=_FilterDatabase,'Controle'!$A$1:$G$1000
+
+[Table]
+Ref=A1:G1000
+Name=TabelaVencimentos
+Style=TableStyleMedium2
+
+[Row1]
+Height=30
+Hidden=0
+Level=0
+Bold=1
+
+[Cell_A1]
+Value=ITEM
+Format=Bold
+
+[Cell_B1]
+Value=CÓDIGO
+Format=Bold
+
+[Cell_C1]
+Value=DATA VENCIMENTO
+Format=Bold
+
+[Cell_D1]
+Value=QUANTIDADE
+Format=Bold
+
+[Cell_E1]
+Value=CATEGORIA
+Format=Bold
+
+[Cell_F1]
+Value=DIAS RESTANTES
+Format=Bold
+
+[Cell_G1]
+Value=STATUS
+Format=Bold
+
+[ExampleData]
+[Row2]
+A2=Produto A
+B2=001
+C2=15/09/2026
+D2=50
+E2=Alimentos
+F2=8
+G2=ATENÇÃO
+
+[Row3]
+A3=Produto B
+B3=002
+C3=01/09/2026
+D3=30
+E3=Medicamentos
+F3=-6
+G3=VENCIDO
+
+[Row4]
+A4=Produto C
+B4=003
+C4=30/10/2026
+D4=100
+E4=Estoque
+F4=53
+G4=OK
+
+[VBA_Code]
+' Coloque este código no Editor VBA (ALT + F11)
+' Menu: Inserir > Módulo > Cole o código abaixo
+
+Option Explicit
+
+Sub IdentificarItensVencidos()
+'
+' IdentificarItensVencidos - Macro para identificar itens vencidos
+'
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim dataVencimento As Date
+    Dim hoje As Date
+    Dim diasRestantes As Long
+    
+    Set ws = ThisWorkbook.Sheets("Controle")
+    hoje = Date
+    lastRow = ws.Cells(ws.Rows.Count, 2).End(xlUp).Row
+    
+    ws.Range("A2:G" & lastRow).Interior.ColorIndex = xlNone
+    
+    For i = 2 To lastRow
+        If ws.Cells(i, 3).Value <> "" Then
+            dataVencimento = ws.Cells(i, 3).Value
+            diasRestantes = DateDiff("d", hoje, dataVencimento)
+            
+            ws.Cells(i, 6).Value = diasRestantes
+            
+            If diasRestantes < 0 Then
+                ws.Range("A" & i & ":G" & i).Interior.Color = RGB(255, 0, 0)
+                ws.Range("A" & i & ":G" & i).Font.Color = RGB(255, 255, 255)
+                ws.Range("A" & i & ":G" & i).Font.Bold = True
+                ws.Cells(i, 7).Value = "VENCIDO"
+                
+            ElseIf diasRestantes <= 7 Then
+                ws.Range("A" & i & ":G" & i).Interior.Color = RGB(255, 255, 0)
+                ws.Range("A" & i & ":G" & i).Font.Color = RGB(0, 0, 0)
+                ws.Range("A" & i & ":G" & i).Font.Bold = True
+                ws.Cells(i, 7).Value = "ATENÇÃO"
+                
+            ElseIf diasRestantes <= 30 Then
+                ws.Range("A" & i & ":G" & i).Interior.Color = RGB(255, 192, 0)
+                ws.Range("A" & i & ":G" & i).Font.Color = RGB(255, 255, 255)
+                ws.Cells(i, 7).Value = "PRÓXIMO"
+                
+            Else
+                ws.Range("A" & i & ":G" & i).Interior.Color = RGB(0, 176, 80)
+                ws.Range("A" & i & ":G" & i).Font.Color = RGB(255, 255, 255)
+                ws.Cells(i, 7).Value = "OK"
+            End If
+        End If
+    Next i
+    
+    MsgBox "✓ Análise concluída!" & vbCrLf & "Itens vencidos destacados com cores.", vbInformation
+
+End Sub
+
+Sub LimparFormatacao()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    
+    Set ws = ThisWorkbook.Sheets("Controle")
+    lastRow = ws.Cells(ws.Rows.Count, 2).End(xlUp).Row
+    
+    ws.Range("A2:G" & lastRow).Interior.ColorIndex = xlNone
+    ws.Range("A2:G" & lastRow).Font.Color = RGB(0, 0, 0)
+    ws.Range("A2:G" & lastRow).Font.Bold = False
+    
+    MsgBox "Formatação removida!", vbInformation
+End Sub
+
+Sub ExibirItensPróximosVencer()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim contador As Long
+    Dim i As Long
+    
+    Set ws = ThisWorkbook.Sheets("Controle")
+    lastRow = ws.Cells(ws.Rows.Count, 2).End(xlUp).Row
+    contador = 0
+    
+    On Error Resume Next
+    ws.AutoFilter.ShowAllData
+    On Error GoTo 0
+    
+    ws.Range("A1:G" & lastRow).AutoFilter
+    ws.Range("A1:G" & lastRow).AutoFilter Field:=7, Criteria1:="<>OK"
+    
+    For i = 2 To lastRow
+        If ws.Cells(i, 7).Value <> "OK" And ws.Cells(i, 7).Value <> "" Then
+            contador = contador + 1
+        End If
+    Next i
+    
+    MsgBox "Itens que requerem atenção: " & contador, vbInformation
+End Sub
